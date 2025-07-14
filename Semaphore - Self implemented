@@ -1,0 +1,100 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <unistd.h>
+
+#define BUFFER_SIZE 5
+int NUM_ITEMS;
+int buffer[BUFFER_SIZE];
+int in = 0, out = 0;
+
+typedef struct
+{
+   int value;
+}Semaphore;
+
+typedef struct
+{
+   int locked;
+}Mutex;
+
+void init_semaphore(Semaphore *s,int val)
+{
+   s->value=val;
+}
+
+void wait_sema(Semaphore *s)
+{
+   while(s->value<=0);
+   s->value--;
+}
+
+void signal_sema(Semaphore *s)
+{
+   s->value++;
+}
+
+void init_mutex(Mutex *m)
+{
+   m->locked=1;
+}
+void lock(Mutex *m)
+{
+   while(m->locked<=0);
+   m->locked=0;
+}
+
+void unlock(Mutex *m)
+{
+   m->locked=1;
+}
+
+Semaphore full,empty;
+Mutex mutex;
+
+void *producer(void *arg)
+{
+   for(int i = 0; i < NUM_ITEMS; i++)
+   {
+      int item = rand() % 100;
+      wait_sema(&empty);
+      lock(&mutex);
+      buffer[in] = item;
+      printf("Producer produced: %d\n\n", item);
+      in = (in + 1) % BUFFER_SIZE;
+      unlock(&mutex);
+      signal_sema(&full);
+      sleep(1);
+   }
+   return NULL;
+}
+
+void *consumer(void *arg)
+{
+   for(int i = 0; i < NUM_ITEMS; i++)
+   {
+      wait_sema(&full);
+      lock(&mutex);
+      int item = buffer[out];
+      printf("Consumer consumed: %d\n\n", item);
+      out = (out + 1) % BUFFER_SIZE;
+      unlock(&mutex);
+      signal_sema(&empty);
+      sleep(2);
+   }
+   return NULL;
+}
+int main()
+{
+   printf("Enter the no.of items to be produced:");
+   scanf("%d",&NUM_ITEMS);
+   pthread_t pro, con;
+   init_semaphore(&empty, BUFFER_SIZE);
+   init_semaphore(&full, 0);
+   init_mutex(&mutex);
+   pthread_create(&pro, NULL, producer, NULL);
+   pthread_create(&con, NULL, consumer, NULL);
+   pthread_join(pro, NULL);
+   pthread_join(con, NULL);
+   return 0;
+}
