@@ -1,0 +1,87 @@
+#include <stdio.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <unistd.h>
+
+#define NUM_READERS 5
+#define NUM_WRITERS 2
+#define MAX_OPERATIONS 10  // Limit the number of reads/writes
+
+sem_t mutex, rw_mutex;
+int read_count = 0;
+int data = 0;  // Shared resource
+int write_count = 0, read_count_total = 0;
+
+void* writer(void* arg) {
+    int id = (int)arg;
+    while (write_count < MAX_OPERATIONS) {
+        sem_wait(&rw_mutex);  // Writer gets exclusive access
+
+        data++;  
+        write_count++;
+        printf("Writer %d wrote: %d\n", id, data);
+
+        sem_post(&rw_mutex);  // Release access
+        sleep(1);
+    }
+    return NULL;
+}
+
+void* reader(void* arg) {
+    int id = (int)arg;
+    while (read_count_total < MAX_OPERATIONS) {
+        sem_wait(&mutex);
+        read_count++;
+        if (read_count == 1) {
+            sem_wait(&rw_mutex);  // First reader blocks writers
+        }
+        sem_post(&mutex);
+
+        // Reading section
+        printf("Reader %d read: %d\n", id, data);
+        read_count_total++;
+
+        sem_wait(&mutex);
+        read_count--;
+        if (read_count == 0) {
+            sem_post(&rw_mutex);  // Last reader allows writers
+        }
+        sem_post(&mutex);
+
+        sleep(1);
+    }
+    return NULL;
+}
+
+int main() {
+    pthread_t readers[NUM_READERS], writers[NUM_WRITERS];
+    int reader_ids[NUM_READERS], writer_ids[NUM_WRITERS];
+
+    sem_init(&mutex, 0, 1);
+    sem_init(&rw_mutex, 0, 1);
+
+    // Create writer threads
+    for (int i = 0; i < NUM_WRITERS; i++) {
+        writer_ids[i] = i + 1;
+        pthread_create(&writers[i], NULL, writer, &writer_ids[i]);
+    }
+
+    // Create reader threads
+    for (int i = 0; i < NUM_READERS; i++) {
+        reader_ids[i] = i + 1;
+        pthread_create(&readers[i], NULL, reader, &reader_ids[i]);
+    }
+
+    // Join all threads
+    for (int i = 0; i < NUM_WRITERS; i++) {
+        pthread_join(writers[i], NULL);
+    }
+    for (int i = 0; i < NUM_READERS; i++) {
+        pthread_join(readers[i], NULL);
+    }
+
+    sem_destroy(&mutex);
+    sem_destroy(&rw_mutex);
+
+    return 0;
+}
