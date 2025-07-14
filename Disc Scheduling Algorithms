@@ -1,0 +1,135 @@
+#include<stdio.h>
+#include<stdlib.h>
+
+void sort(int a[100],int x)
+{
+   for(int i=0;i<x-1;i++)
+   {
+      for(int j=0;j<x-i-1;j++)
+      {
+         if(a[j]>a[j+1])
+         {
+            int temp=a[j];
+            a[j]=a[j+1];
+            a[j+1]=temp;
+         }
+      }
+   }
+}
+
+void fcfs(int p,int a[100],int x)
+{
+   int sum=0,count=0;
+   printf("\nFCFS :-\n");
+   printf("%d\t",p);
+   for(int i=0;i<x;i++)
+   {
+      printf("%d\t",a[i]);
+      count++;
+   }
+   printf("\n");
+   sum=sum+abs(p-a[0]);
+   for(int i=0;i<x-1;i++)
+   {
+      sum=sum+abs(a[i+1]-a[i]);
+   }
+   //printf("Head shifts = %d\n",count);
+   printf("\nTotal head movement = %d\n",sum);
+}
+
+void scan(int p,int a[100],int x,int y)
+{
+   printf("\nSCAN :- \n");
+   int temp1[100],j=0,k=0,temp2[100],count=0;
+   for(int i=0;i<x;i++)
+   {
+      if(a[i]>p)
+      {
+         temp1[j]=a[i];
+         j++;
+      }
+      else if(a[i]<p)
+      {
+         temp2[k]=a[i];
+         k++;
+      }
+   }
+   sort(temp1,j);
+   sort(temp2,k);
+   printf("%d\t",p);
+   for(int i=0;i<j;i++)
+   {
+      printf("%d\t",temp1[i]);
+      count++;
+   }
+   printf("%d\t",y);
+   for(int i=k-1;i>=0;i--)
+   {
+      printf("%d\t",temp2[i]);
+      count++;
+   }
+   printf("\n");
+   int sum=0;
+   sum=(y-p)+(y-temp2[0]);
+   //printf("Head shifts = %d\n",count+1);
+   printf("\nTotal head movement = %d\n",sum);
+}
+
+void cscan(int p,int a[100],int x,int y)
+{
+   printf("\nCSCAN :-\n");
+   int temp1[100],j=0,k=0,temp2[100], count=0;
+   temp1[j++]=y;
+   temp2[k++]=0;
+   for(int i=0;i<x;i++)
+   {
+      if(a[i]>p)
+      {
+         temp1[j]=a[i];
+         j++;
+      }
+      else if(a[i]<p)
+      {
+         temp2[k]=a[i];
+         k++;
+      }
+   }
+   sort(temp1,j);
+   sort(temp2,k);
+   printf("%d\t",p);
+   for(int i=0;i<j;i++)
+   {
+      printf("%d\t",temp1[i]);
+      count++;
+   }
+   for(int i=0;i<k;i++)
+   {
+      printf("%d\t",temp2[i]);
+      count++;
+   }
+   printf("\n");
+   int sum=0;
+   sum=(y-p)+(temp2[k-1]-0)+(y-0);
+   //printf("Head shifts = %d\n",count);
+   printf("\nTotal head movement = %d\n",sum);
+}
+
+int main()
+{
+   int n,req[100],max,curr;
+   printf("No of tracks in the request :- ");
+   scanf("%d",&n);
+   printf("Enter the sequence of request :-");
+   for(int i=0;i<n;i++)
+   {
+      scanf("%d",&req[i]);
+   }
+   printf("Max track of the disc :-");
+   scanf("%d",&max);
+   printf("Current position of the head :-");
+   scanf("%d",&curr);
+   fcfs(curr,req,n);
+   scan(curr,req,n,max);
+   cscan(curr,req,n,max);
+   return 0;
+}
