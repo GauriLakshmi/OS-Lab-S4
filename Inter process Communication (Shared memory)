@@ -1,0 +1,129 @@
+Sender
+
+#include <stdio.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+
+#define NAME "IR"
+
+
+typedef struct
+{
+   int datastatus;
+   int exitstatus;
+   char message[50];
+} shared_area;
+
+int main()
+{
+   int fd;
+   shared_area *sharedBuffer;
+   char message[128];
+   fd = shm_open(NAME, O_CREAT | O_RDWR, 0666);
+   if (fd > 0)
+   {
+      ftruncate(fd, sizeof(shared_area));
+      sharedBuffer = (shared_area *)mmap(0, sizeof(shared_area), PROT_READ | PROT_WRITE, MAP_SHARED, fd,0);
+      sharedBuffer->datastatus = 0;
+      sharedBuffer->exitstatus =0;
+      while(1)
+      {
+         if(sharedBuffer->datastatus == 0)
+         {
+            printf("User 1: Enter the message (STOP to exit): ");
+            scanf("%s", message);
+            strcpy(sharedBuffer->message, message);
+            sharedBuffer->datastatus = 1;
+            if(strcmp(message, "STOP") == 0)
+            {
+               sharedBuffer->exitstatus = 1;
+               break;
+            }
+            printf("Waiting for User 2's response...\n");
+            while (sharedBuffer->datastatus == 1);
+            printf("User 2 says: \"%s\"\n", sharedBuffer->message);
+            if (sharedBuffer->exitstatus == 1)
+            {
+               printf("User 2 is exiting...\n");
+               break;
+            }
+         }
+      }
+      munmap(sharedBuffer, sizeof(shared_area));
+      close(fd);
+      shm_unlink(NAME);
+      printf("\nShared memory unlinked. Exiting...\n");
+   }
+   else
+   {
+      printf("Error in creating shared memory.\n");
+   }
+   return 0;
+}
+
+Reciever
+
+#include <stdio.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+
+#define NAME "IR"
+
+typedef struct
+{
+   int datastatus;
+   int exitstatus;
+   char message[50];
+} shared_area;
+
+int main()
+{
+   int fd;
+   shared_area *sharedBuffer;
+    char message[128];
+   fd = shm_open(NAME, O_RDWR, 0666);
+   if(fd > 0)
+   {
+      sharedBuffer = (shared_area *)mmap(0, sizeof(shared_area), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+      while(1)
+      {
+         if(sharedBuffer->datastatus == 0)
+         {
+            printf("Waiting for User 1's response...\n");
+            while (sharedBuffer->datastatus == 0);
+         }
+         if(sharedBuffer->datastatus == 1)
+         {
+            printf("User 1 says: \"%s\"\n", sharedBuffer->message);
+            if(sharedBuffer->exitstatus == 1)
+            {
+               printf("User 1 requested exit. Exiting...\n");
+               break;
+            }
+            printf("User 2: Enter the response (STOP to exit): ");
+            scanf("%s", message);
+            strcpy(sharedBuffer->message, message);
+            sharedBuffer->datastatus = 0;
+            if (strcmp(message, "STOP") == 0)
+            {
+               sharedBuffer->exitstatus = 1;
+               break;
+            }
+         }
+      }
+      munmap(sharedBuffer, sizeof(shared_area));
+      close(fd);
+      printf("\nExiting...\n");
+   }
+   else
+   {
+      printf("Error in accessing shared memory.\n");
+   }
+   return 0;
+}
