@@ -1,0 +1,153 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+int max[10][10], allocation[10][10], available[10], need[10][10];
+int work[10], finish[10], safe[10], request[10];
+char ch;
+int n, m, z = 0, count = 0;
+void safety()
+{
+   int flag = 1;
+   z=0; //reset everytime
+   for (int i = 0; i < m; i++)
+   {
+      work[i] = available[i];
+   }
+   for (int i = 0; i < n; i++)
+   {
+      finish[i] = 0;
+   }
+   while (count < n && z<n)
+   {
+      int found = 0;
+      for (int i = 0; i < n; i++)
+      {
+         if (finish[i] == 0)
+         {
+            int canAllocate = 1;
+            for (int j = 0; j < m; j++)
+            {
+               if (need[i][j] > work[j])
+               {
+                  canAllocate = 0;
+                  break;
+               }
+            }
+            if (canAllocate)
+            {
+               for (int j = 0; j < m; j++)
+               {
+                  work[j] += allocation[i][j];
+               }
+               finish[i] = 1;
+               safe[z++] = i;
+               found = 1;
+            }
+         }
+      }
+      if (!found)
+      {
+         break;
+      }
+      count++;
+   }
+   for (int i = 0; i < n; i++)
+   {
+      if (finish[i] == 0)
+      {
+         printf("Deadlock detected\n");
+         flag = 0;
+         break;
+      }
+   }
+   if (flag)
+   {
+      printf("The system is in a safe state.\nSafe Sequence: ");
+      for (int i = 0; i < z; i++)
+      {
+         printf("P%d ", safe[i]);
+      }
+      printf("\n");
+   }
+}
+void resource(int id)
+{
+   for (int i = 0; i < m; i++)
+   {
+      if (request[i] > need[id][i])
+      {
+         printf("Error: Process %d has exceeded its maximum claim.\n", id);
+         return;
+      }
+      if (request[i] > available[i])
+      {
+         printf("Resource not available.\n");
+         return;
+      }
+      available[i] -= request[i];
+      allocation[id][i] += request[i];
+      need[id][i] -= request[i];
+   }
+   safety();
+   int safe_state=1;
+   for(int i=0;i<n;i++)
+   {
+      if(finish[i]==0)
+      {
+         safe_state=0;
+         break;
+      }
+   }
+   if(!safe_state)
+   {
+      printf("Request cannot be granted,since it is not safe!");
+   }
+}
+int main()
+{
+   printf("Enter the number of processes: ");
+   scanf("%d", &n);
+   printf("Enter the number of resources: ");
+   scanf("%d", &m);
+   for (int i = 0; i < m; i++)
+   {
+      printf("Enter available resources for resource %d: ", i);
+      scanf("%d", &available[i]);
+   }
+   for (int i = 0; i < n; i++)
+   {
+      for (int j = 0; j < m; j++)
+      {
+         printf("Enter the max demand of process %d for resource %d: ", i, j);
+         scanf("%d", &max[i][j]);
+         printf("Enter the current allocation of process %d for resource %d: ", i, j);
+         scanf("%d", &allocation[i][j]);
+         need[i][j] = max[i][j] - allocation[i][j];
+      }
+   }
+   printf("Is there any request for any process? (y/n): ");
+   scanf(" %c", &ch);
+   if (ch == 'y')
+   {
+      int id;
+      printf("Enter the PID of the requesting process: ");
+      scanf("%d", &id);
+      // Validate the PID
+      if (id < 0 || id >= n)
+      {
+         printf("Error: Invalid PID. Please enter a PID between 0 and %d.\n", n - 1);
+         return 1; // Exit the program with an error code
+      }
+      for (int i = 0; i < m; i++)
+      {
+         printf("Enter the request of Process %d for resource %d: ", id, i);
+         scanf("%d", &request[i]);
+      }
+      resource(id);
+   }
+   else
+   {
+      safety();
+   }
+   return 0;
+}
